@@ -127,14 +127,14 @@ module InvoicePrinter
       @push_items_table = 0
       @pdf.fill_color '000000'
       build_header
+      build_logo
       build_provider_box
       build_purchaser_box
-      build_payment_method_box
-      build_info_box
+      # build_payment_method_box
+      # build_info_box
       build_items
       build_total
       build_stamp
-      build_logo
       build_note
       build_footer
     end
@@ -144,13 +144,15 @@ module InvoicePrinter
     #   NAME                      NO. 901905374583579
     #   Sublabel name
     def build_header
-      @pdf.text_box(
-        @labels[:name],
-        size: 20,
-        at: [0, 720 - @push_down],
-        width: 300,
-        align: :left
-      )
+      if used? @labels[:name]
+        @pdf.text_box(
+          @labels[:name],
+          size: 20,
+          at: [0, 720 - @push_down],
+          width: 300,
+          align: :left
+        )
+      end
 
       if used? @labels[:sublabels][:name]
         @pdf.text_box(
@@ -164,8 +166,8 @@ module InvoicePrinter
 
       @pdf.text_box(
         @document.number,
-        size: 20,
-        at: [240, 720 - @push_down],
+        size: 15,
+        at: [240, 720 - @push_down - 35],
         width: 300,
         align: :right
       )
@@ -196,9 +198,9 @@ module InvoicePrinter
         at: [10, 640 - @push_down],
         width: 240
       )
-      @pdf.text_box(
-        @labels[:provider],
-        size: 11,
+      @pdf.formatted_text_box(
+        [text: @labels[:provider], color: 'BBBBBB'],
+        size: 9,
         at: [10, 660 - @push_down],
         width: 240
       )
@@ -217,23 +219,23 @@ module InvoicePrinter
         at: [10, 620 - @push_down],
         width: 240
       )
-      @pdf.text_box(
-        @document.provider_postcode,
-        size: 10,
-        at: [10, 605 - @push_down],
-        width: 240
-      )
+      # @pdf.text_box(
+      #   @document.provider_postcode,
+      #   size: 10,
+      #   at: [10, 605 - @push_down],
+      #   width: 240
+      # )
       @pdf.text_box(
         @document.provider_city,
         size: 10,
-        at: [60, 605 - @push_down],
+        at: [10, 605 - @push_down],
         width: 240
       )
       unless @document.provider_city_part.empty?
         @pdf.text_box(
           @document.provider_city_part,
           size: 10,
-          at: [60, 590 - @push_down],
+          at: [10, 590 - @push_down],
           width: 240
         )
       end
@@ -261,6 +263,7 @@ module InvoicePrinter
           width: 240
         )
       end
+      @pdf.stroke_color('DDDDDD')
       @pdf.stroke_rounded_rectangle([0, 670 - @push_down], 270, 150, 6)
     end
 
@@ -284,9 +287,9 @@ module InvoicePrinter
         at: [290, 640 - @push_down],
         width: 240
       )
-      @pdf.text_box(
-        @labels[:purchaser],
-        size: 11,
+      @pdf.formatted_text_box(
+        [text: @labels[:purchaser], color: 'BBBBBB'],
+        size: 9,
         at: [290, 660 - @push_down],
         width: 240
       )
@@ -305,23 +308,23 @@ module InvoicePrinter
         at: [290, 620 - @push_down],
         width: 240
       )
-      @pdf.text_box(
-        @document.purchaser_postcode,
-        size: 10,
-        at: [290, 605 - @push_down],
-        width: 240
-      )
+      # @pdf.text_box(
+      #   @document.purchaser_postcode,
+      #   size: 10,
+      #   at: [290, 605 - @push_down],
+      #   width: 240
+      # )
       @pdf.text_box(
         @document.purchaser_city,
         size: 10,
-        at: [340, 605 - @push_down],
+        at: [290, 605 - @push_down],
         width: 240
       )
       unless @document.purchaser_city_part.empty?
         @pdf.text_box(
           @document.purchaser_city_part,
           size: 10,
-          at: [340, 590 - @push_down],
+          at: [290, 590 - @push_down],
           width: 240
         )
       end
@@ -343,7 +346,7 @@ module InvoicePrinter
       end
       unless @document.purchaser_tax_id.empty?
         @pdf.text_box(
-          "#{@labels[:tax_id]}:    #{@document.purchaser_tax_id}",
+          "#{@labels[:tax_id]}: #{@document.purchaser_tax_id}",
           size: 10,
           at: [290, 535 - @push_down],
           width: 240
@@ -598,7 +601,7 @@ module InvoicePrinter
     #   |x    |         2|    hr|              $2|   $1|              $4|
     #   =================================================================
     def build_items
-      @pdf.move_down(23 + @push_items_table + @push_down)
+      @pdf.move_down(23 + @push_items_table + @push_down - 60)
 
       items_params = determine_items_structure
       items = build_items_data(items_params)
@@ -607,11 +610,12 @@ module InvoicePrinter
       styles = {
         headers: headers,
         row_colors: ['F5F5F5', nil],
+        border_color: 'FFFFFF',
         width: 550,
         align: {
           0 => :left,
-          1 => :right,
-          2 => :right,
+          1 => :left,
+          2 => :left,
           3 => :right,
           4 => :right,
           5 => :right,
@@ -752,13 +756,11 @@ module InvoicePrinter
       end
     end
 
-    # Insert a logotype at the left bottom of the document
-    #
-    # If a note is present, position it on top of it.
+    # Insert a logotype at the left top of the document
     def build_logo
       if @logo && !@logo.empty?
-        bottom = @document.note.empty? ? 75 : 85
-        @pdf.image(@logo, at: [0, bottom], fit: [200, 50])
+        @pdf.image(@logo, at: [0, 720 - @push_down], fit: [200, 50])
+        @push_down += 15
       end
     end
 
